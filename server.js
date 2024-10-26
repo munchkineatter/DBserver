@@ -168,29 +168,29 @@ wss.on('connection', (ws) => {
                 console.log(`[Server] Received session_reset from ${deviceRole}, sessionId: ${sessionId}`);
                 if (sessionId && sessions.has(sessionId)) {
                     const session = sessions.get(sessionId);
-                    
+
                     // Clear the session data on the server
                     session.sessionLog = [];
                     session.readings = [];
                     session.timerData = null;
-                    
+
                     const resetMessage = JSON.stringify({
                         type: 'session_reset',
                         sessionId: sessionId
                     });
 
                     // Send reset message to all viewers
-                    console.log(`[Server] Broadcasting reset to ${session.viewers.size} viewers`);
+                    console.log(`[Server] Broadcasting reset to ${session.viewers.size} viewer(s)`);
                     session.viewers.forEach(viewer => {
                         if (viewer.readyState === WebSocket.OPEN) {
-                            console.log('[Server] Sending reset to viewer');
+                            console.log('[Server] Sending session_reset to viewer');
                             viewer.send(resetMessage);
                         }
                     });
 
-                    // Also send confirmation back to recorder
+                    // Send reset confirmation to recorder
                     if (session.recorder && session.recorder.readyState === WebSocket.OPEN) {
-                        console.log('[Server] Sending reset confirmation to recorder');
+                        console.log('[Server] Sending session_reset confirmation to recorder');
                         session.recorder.send(resetMessage);
                     }
                 }
