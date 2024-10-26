@@ -165,30 +165,33 @@ wss.on('connection', (ws) => {
                 break;
 
             case 'session_reset':
-                console.log(`Received session_reset from ${deviceRole}, sessionId: ${sessionId}`);
+                console.log(`[Server] Received session_reset from ${deviceRole}, sessionId: ${sessionId}`);
                 if (sessionId && sessions.has(sessionId)) {
                     const session = sessions.get(sessionId);
-
-                    // Clear the session log on the server
+                    
+                    // Clear the session data on the server
                     session.sessionLog = [];
                     session.readings = [];
                     session.timerData = null;
-
-                    // Notify all viewers to reset their session logs
-                    console.log(`Notifying ${session.viewers.size} viewer(s) about session reset`);
-                    session.viewers.forEach(viewer => {
-                        console.log(`Sending session_reset to a viewer`);
-                        viewer.send(JSON.stringify({
-                            type: 'session_reset'
-                        }));
+                    
+                    const resetMessage = JSON.stringify({
+                        type: 'session_reset',
+                        sessionId: sessionId
                     });
 
-                    // Send to the recorder as well
+                    // Send reset message to all viewers
+                    console.log(`[Server] Broadcasting reset to ${session.viewers.size} viewers`);
+                    session.viewers.forEach(viewer => {
+                        if (viewer.readyState === WebSocket.OPEN) {
+                            console.log('[Server] Sending reset to viewer');
+                            viewer.send(resetMessage);
+                        }
+                    });
+
+                    // Also send confirmation back to recorder
                     if (session.recorder && session.recorder.readyState === WebSocket.OPEN) {
-                        console.log(`Sending session_reset to the recorder`);
-                        session.recorder.send(JSON.stringify({
-                            type: 'session_reset'
-                        }));
+                        console.log('[Server] Sending reset confirmation to recorder');
+                        session.recorder.send(resetMessage);
                     }
                 }
                 break;
