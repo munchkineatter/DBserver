@@ -205,24 +205,21 @@ wss.on('connection', (ws) => {
                     // Clear the session log on the server
                     session.sessionLog = [];
                     
-                    const resetViewMessage = JSON.stringify({
-                        type: 'reset_view_log',
-                        clearAll: true
+                    const resetMessage = JSON.stringify({
+                        type: 'reset_view_log'
                     });
 
                     // Send reset message to all viewers
-                    console.log(`[Server] Broadcasting reset_view_log to ${session.viewers.size} viewer(s)`);
+                    console.log(`[Server] Broadcasting reset_view_log to viewers`);
                     session.viewers.forEach(viewer => {
                         if (viewer.readyState === WebSocket.OPEN) {
-                            console.log('[Server] Sending reset_view_log to viewer');
-                            viewer.send(resetViewMessage);
+                            viewer.send(resetMessage);
                         }
                     });
 
-                    // Also send confirmation back to recorder
+                    // Send to recorder as well
                     if (session.recorder && session.recorder.readyState === WebSocket.OPEN) {
-                        console.log('[Server] Sending reset_view_log confirmation to recorder');
-                        session.recorder.send(resetViewMessage);
+                        session.recorder.send(resetMessage);
                     }
                 }
                 break;
