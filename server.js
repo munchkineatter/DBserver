@@ -131,14 +131,24 @@ wss.on('connection', (ws) => {
             case 'session_recorded':
                 if (sessionId && sessions.has(sessionId)) {
                     const session = sessions.get(sessionId);
+                    // Store the session in the server's log
+                    if (!session.sessionLog) {
+                        session.sessionLog = [];
+                    }
                     session.sessionLog.push(data.session);
-                    // Broadcast to all viewers
+                    
+                    // Broadcast to all viewers AND back to recorder
                     session.viewers.forEach(viewer => {
                         viewer.send(JSON.stringify({
                             type: 'session_recorded',
                             session: data.session
                         }));
                     });
+                    // Send confirmation back to recorder
+                    ws.send(JSON.stringify({
+                        type: 'session_recorded',
+                        session: data.session
+                    }));
                 }
                 break;
         }
