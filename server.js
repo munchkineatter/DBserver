@@ -176,7 +176,8 @@ wss.on('connection', (ws) => {
 
                     const resetMessage = JSON.stringify({
                         type: 'session_reset',
-                        sessionId: sessionId
+                        sessionId: sessionId,
+                        clearLog: true
                     });
 
                     // Send reset message to all viewers
@@ -188,9 +189,9 @@ wss.on('connection', (ws) => {
                         }
                     });
 
-                    // Send reset confirmation to recorder
+                    // Also send reset confirmation to recorder
                     if (session.recorder && session.recorder.readyState === WebSocket.OPEN) {
-                        console.log('[Server] Sending session_reset confirmation to recorder');
+                        console.log('[Server] Sending reset confirmation to recorder');
                         session.recorder.send(resetMessage);
                     }
                 }
