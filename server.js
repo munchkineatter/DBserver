@@ -14,7 +14,7 @@ const server = app.listen(port, () => {
 
 const wss = new WebSocket.Server({ server });
 
-// Store active sessions
+// Store active sessions with their data
 const sessions = new Map();
 
 wss.on('connection', (ws) => {
@@ -31,6 +31,8 @@ wss.on('connection', (ws) => {
                 sessions.set(sessionId, {
                     recorder: ws,
                     viewers: new Set(),
+                    isActive: true,
+                    readings: []  // Store readings history
                 });
                 ws.send(JSON.stringify({
                     type: 'session_created',
@@ -42,12 +44,31 @@ wss.on('connection', (ws) => {
                 sessionId = data.sessionId;
                 deviceRole = 'viewer';
                 const session = sessions.get(sessionId);
+                
                 if (session) {
                     session.viewers.add(ws);
                     ws.send(JSON.stringify({
                         type: 'session_joined',
-                        sessionId
+                        sessionId,
+                        isActive: session.isActive
                     }));
+
+                    // Send existing readings history to new viewer
+                    if (session.readings.length > 0) {
+                        session.readings.forEach(reading => {
+                            ws.send(JSON.stringify({
+                                type: 'decibel_update',
+                                data: reading
+                            }));
+                        });
+                    }
+
+                    // If session is not active, send session_ended
+                    if (!session.isActive) {
+                        ws.send(JSON.stringify({
+                            type: 'session_ended'
+                        }));
+                    }
                 } else {
                     ws.send(JSON.stringify({
                         type: 'error',
@@ -59,11 +80,26 @@ wss.on('connection', (ws) => {
             case 'decibel_data':
                 if (sessionId && sessions.has(sessionId)) {
                     const session = sessions.get(sessionId);
+                    // Store reading in session history
+                    session.readings.push(data.data);
                     // Broadcast to all viewers
                     session.viewers.forEach(viewer => {
                         viewer.send(JSON.stringify({
                             type: 'decibel_update',
                             data: data.data
+                        }));
+                    });
+                }
+                break;
+
+            case 'stop_session':
+                if (sessionId && sessions.has(sessionId)) {
+                    const session = sessions.get(sessionId);
+                    session.isActive = false;
+                    // Notify all viewers that session has ended
+                    session.viewers.forEach(viewer => {
+                        viewer.send(JSON.stringify({
+                            type: 'session_ended'
                         }));
                     });
                 }
@@ -75,13 +111,17 @@ wss.on('connection', (ws) => {
         if (sessionId && sessions.has(sessionId)) {
             const session = sessions.get(sessionId);
             if (deviceRole === 'recorder') {
+                session.isActive = false;
                 // Notify all viewers that session has ended
                 session.viewers.forEach(viewer => {
                     viewer.send(JSON.stringify({
                         type: 'session_ended'
                     }));
                 });
-                sessions.delete(sessionId);
+                // Keep session data for a while before deleting
+                setTimeout(() => {
+                    sessions.delete(sessionId);
+                }, 3600000); // Keep session for 1 hour
             } else if (deviceRole === 'viewer') {
                 session.viewers.delete(ws);
             }
