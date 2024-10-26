@@ -226,6 +226,31 @@ wss.on('connection', (ws) => {
                     }
                 }
                 break;
+
+            case 'clear_all_logs':
+                console.log('[Server] Clearing all logs for session:', sessionId);
+                if (sessionId && sessions.has(sessionId)) {
+                    const session = sessions.get(sessionId);
+                    
+                    // Clear server-side logs
+                    session.sessionLog = [];
+                    
+                    const clearMessage = JSON.stringify({
+                        type: 'clear_all_logs'
+                    });
+
+                    // Send clear message to everyone including recorder
+                    if (session.recorder && session.recorder.readyState === WebSocket.OPEN) {
+                        session.recorder.send(clearMessage);
+                    }
+                    
+                    session.viewers.forEach(viewer => {
+                        if (viewer.readyState === WebSocket.OPEN) {
+                            viewer.send(clearMessage);
+                        }
+                    });
+                }
+                break;
         }
     });
 
