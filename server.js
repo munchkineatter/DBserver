@@ -34,11 +34,12 @@ wss.on('connection', (ws) => {
                     isActive: true,
                     readings: [],
                     timerData: null,
-                    sessionLog: []  // Add session log storage
+                    sessionLog: []
                 });
                 ws.send(JSON.stringify({
                     type: 'session_created',
-                    sessionId
+                    sessionId,
+                    sessionLog: sessions.get(sessionId).sessionLog  // Send existing session log
                 }));
                 break;
 
