@@ -206,7 +206,8 @@ wss.on('connection', (ws) => {
                     session.sessionLog = [];
                     
                     const resetViewMessage = JSON.stringify({
-                        type: 'reset_view_log'
+                        type: 'reset_view_log',
+                        clearAll: true
                     });
 
                     // Send reset message to all viewers
@@ -218,8 +219,9 @@ wss.on('connection', (ws) => {
                         }
                     });
 
-                    // Send confirmation back to recorder
+                    // Also send confirmation back to recorder
                     if (session.recorder && session.recorder.readyState === WebSocket.OPEN) {
+                        console.log('[Server] Sending reset_view_log confirmation to recorder');
                         session.recorder.send(resetViewMessage);
                     }
                 }
