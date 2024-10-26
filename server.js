@@ -145,13 +145,21 @@ wss.on('connection', (ws) => {
                         data.session.sessionNumber = session.sessionLog.length + 1;
                         session.sessionLog.push(data.session);
                         
-                        // Broadcast to viewers
-                        session.viewers.forEach(viewer => {
-                            viewer.send(JSON.stringify({
-                                type: 'session_recorded',
-                                session: data.session
-                            }));
+                        // Prepare the message to send
+                        const messageToSend = JSON.stringify({
+                            type: 'session_recorded',
+                            session: data.session
                         });
+                        
+                        // Broadcast to all viewers
+                        session.viewers.forEach(viewer => {
+                            viewer.send(messageToSend);
+                        });
+                        
+                        // **Send to the recorder as well**
+                        if (session.recorder && session.recorder.readyState === WebSocket.OPEN) {
+                            session.recorder.send(messageToSend);
+                        }
                     }
                 }
                 break;
