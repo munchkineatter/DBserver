@@ -131,24 +131,19 @@ wss.on('connection', (ws) => {
             case 'session_recorded':
                 if (sessionId && sessions.has(sessionId)) {
                     const session = sessions.get(sessionId);
-                    // Store the session in the server's log
-                    if (!session.sessionLog) {
-                        session.sessionLog = [];
+                    // Check for duplicates before adding to session log
+                    const isDuplicate = session.sessionLog.some(s => s.id === data.session.id);
+                    if (!isDuplicate) {
+                        session.sessionLog.push(data.session);
+                        
+                        // Broadcast to viewers only (not back to recorder)
+                        session.viewers.forEach(viewer => {
+                            viewer.send(JSON.stringify({
+                                type: 'session_recorded',
+                                session: data.session
+                            }));
+                        });
                     }
-                    session.sessionLog.push(data.session);
-                    
-                    // Broadcast to all viewers AND back to recorder
-                    session.viewers.forEach(viewer => {
-                        viewer.send(JSON.stringify({
-                            type: 'session_recorded',
-                            session: data.session
-                        }));
-                    });
-                    // Send confirmation back to recorder
-                    ws.send(JSON.stringify({
-                        type: 'session_recorded',
-                        session: data.session
-                    }));
                 }
                 break;
         }
