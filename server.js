@@ -33,7 +33,8 @@ wss.on('connection', (ws) => {
                     viewers: new Set(),
                     isActive: true,
                     readings: [],
-                    timerData: null  // Add timer data storage
+                    timerData: null,
+                    sessionLog: []  // Add session log storage
                 });
                 ws.send(JSON.stringify({
                     type: 'session_created',
@@ -52,7 +53,8 @@ wss.on('connection', (ws) => {
                         type: 'session_joined',
                         sessionId,
                         isActive: session.isActive,
-                        timerData: session.timerData  // Send current timer data
+                        timerData: session.timerData,
+                        sessionLog: session.sessionLog  // Send existing session log
                     }));
 
                     // Send existing readings history to new viewer
@@ -121,6 +123,20 @@ wss.on('connection', (ws) => {
                         viewer.send(JSON.stringify({
                             type: 'timer_update',
                             timerData: data.timerData
+                        }));
+                    });
+                }
+                break;
+
+            case 'session_recorded':
+                if (sessionId && sessions.has(sessionId)) {
+                    const session = sessions.get(sessionId);
+                    session.sessionLog.push(data.session);
+                    // Broadcast to all viewers
+                    session.viewers.forEach(viewer => {
+                        viewer.send(JSON.stringify({
+                            type: 'session_recorded',
+                            session: data.session
                         }));
                     });
                 }
