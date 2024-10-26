@@ -85,17 +85,25 @@ wss.on('connection', (ws) => {
                     const session = sessions.get(sessionId);
                     // Store reading in session history
                     session.readings.push(data.data);
-                    // Broadcast to all viewers AND back to recorder
+                    
+                    // Make sure to include maxDecibel in the broadcast
+                    const readingWithMax = {
+                        ...data.data,
+                        maxDecibel: data.data.maxDecibel
+                    };
+                    
+                    // Broadcast to all viewers
                     session.viewers.forEach(viewer => {
                         viewer.send(JSON.stringify({
                             type: 'decibel_update',
-                            data: data.data
+                            data: readingWithMax
                         }));
                     });
+                    
                     // Send back to recorder for confirmation
                     ws.send(JSON.stringify({
                         type: 'decibel_update',
-                        data: data.data
+                        data: readingWithMax
                     }));
                 }
                 break;
