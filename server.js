@@ -131,12 +131,22 @@ wss.on('connection', (ws) => {
             case 'session_recorded':
                 if (sessionId && sessions.has(sessionId)) {
                     const session = sessions.get(sessionId);
-                    // Check for duplicates before adding to session log
-                    const isDuplicate = session.sessionLog.some(s => s.id === data.session.id);
+                    // Store the session in the server's log
+                    if (!session.sessionLog) {
+                        session.sessionLog = [];
+                    }
+                    
+                    // Check for duplicates using timestamp proximity
+                    const isDuplicate = session.sessionLog.some(s => 
+                        Math.abs(new Date(s.timestamp) - new Date(data.session.timestamp)) < 1000
+                    );
+                    
                     if (!isDuplicate) {
+                        // Ensure correct session number
+                        data.session.sessionNumber = session.sessionLog.length + 1;
                         session.sessionLog.push(data.session);
                         
-                        // Broadcast to viewers only (not back to recorder)
+                        // Broadcast to viewers
                         session.viewers.forEach(viewer => {
                             viewer.send(JSON.stringify({
                                 type: 'session_recorded',
