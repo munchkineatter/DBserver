@@ -14,7 +14,7 @@ const server = app.listen(port, () => {
 
 const wss = new WebSocket.Server({ server });
 
-// Store active sessions with their data
+// Store active sessions
 const sessions = new Map();
 
 wss.on('connection', (ws) => {
@@ -31,10 +31,6 @@ wss.on('connection', (ws) => {
                 sessions.set(sessionId, {
                     recorder: ws,
                     viewers: new Set(),
-                    isActive: true,
-                    readings: [],
-                    timerData: null,
-                    sessionLog: []  // Add session log storage
                 });
                 ws.send(JSON.stringify({
                     type: 'session_created',
@@ -82,76 +78,13 @@ wss.on('connection', (ws) => {
             case 'decibel_data':
                 if (sessionId && sessions.has(sessionId)) {
                     const session = sessions.get(sessionId);
-                    // Store reading in session history
-                    session.readings.push(data.data);
-                    // Broadcast to all viewers AND back to recorder
+                    // Broadcast to all viewers
                     session.viewers.forEach(viewer => {
                         viewer.send(JSON.stringify({
                             type: 'decibel_update',
                             data: data.data
                         }));
                     });
-                    // Send back to recorder for confirmation
-                    ws.send(JSON.stringify({
-                        type: 'decibel_update',
-                        data: data.data
-                    }));
-                }
-                break;
-
-            case 'stop_session':
-                if (sessionId && sessions.has(sessionId)) {
-                    const session = sessions.get(sessionId);
-                    session.isActive = false;
-                    // Notify all viewers that session has ended
-                    session.viewers.forEach(viewer => {
-                        viewer.send(JSON.stringify({
-                            type: 'session_ended'
-                        }));
-                    });
-                }
-                break;
-
-            case 'timer_update':
-                if (sessionId && sessions.has(sessionId)) {
-                    const session = sessions.get(sessionId);
-                    session.timerData = data.timerData;
-                    // Broadcast timer update to all viewers
-                    session.viewers.forEach(viewer => {
-                        viewer.send(JSON.stringify({
-                            type: 'timer_update',
-                            timerData: data.timerData
-                        }));
-                    });
-                }
-                break;
-
-            case 'session_recorded':
-                if (sessionId && sessions.has(sessionId)) {
-                    const session = sessions.get(sessionId);
-                    // Store the session in the server's log
-                    if (!session.sessionLog) {
-                        session.sessionLog = [];
-                    }
-                    
-                    // Check for duplicates using timestamp proximity
-                    const isDuplicate = session.sessionLog.some(s => 
-                        Math.abs(new Date(s.timestamp) - new Date(data.session.timestamp)) < 1000
-                    );
-                    
-                    if (!isDuplicate) {
-                        // Ensure correct session number
-                        data.session.sessionNumber = session.sessionLog.length + 1;
-                        session.sessionLog.push(data.session);
-                        
-                        // Broadcast to viewers
-                        session.viewers.forEach(viewer => {
-                            viewer.send(JSON.stringify({
-                                type: 'session_recorded',
-                                session: data.session
-                            }));
-                        });
-                    }
                 }
                 break;
         }
@@ -161,17 +94,13 @@ wss.on('connection', (ws) => {
         if (sessionId && sessions.has(sessionId)) {
             const session = sessions.get(sessionId);
             if (deviceRole === 'recorder') {
-                session.isActive = false;
                 // Notify all viewers that session has ended
                 session.viewers.forEach(viewer => {
                     viewer.send(JSON.stringify({
                         type: 'session_ended'
                     }));
                 });
-                // Keep session data for a while before deleting
-                setTimeout(() => {
-                    sessions.delete(sessionId);
-                }, 3600000); // Keep session for 1 hour
+                sessions.delete(sessionId);
             } else if (deviceRole === 'viewer') {
                 session.viewers.delete(ws);
             }
