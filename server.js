@@ -163,6 +163,35 @@ wss.on('connection', (ws) => {
                     }
                 }
                 break;
+
+            case 'session_reset':
+                console.log(`Received session_reset from ${deviceRole}, sessionId: ${sessionId}`);
+                if (sessionId && sessions.has(sessionId)) {
+                    const session = sessions.get(sessionId);
+
+                    // Clear the session log on the server
+                    session.sessionLog = [];
+                    session.readings = [];
+                    session.timerData = null;
+
+                    // Notify all viewers to reset their session logs
+                    console.log(`Notifying ${session.viewers.size} viewer(s) about session reset`);
+                    session.viewers.forEach(viewer => {
+                        console.log(`Sending session_reset to a viewer`);
+                        viewer.send(JSON.stringify({
+                            type: 'session_reset'
+                        }));
+                    });
+
+                    // Optionally send to the recorder as well
+                    if (session.recorder && session.recorder.readyState === WebSocket.OPEN) {
+                        console.log(`Sending session_reset to the recorder`);
+                        session.recorder.send(JSON.stringify({
+                            type: 'session_reset'
+                        }));
+                    }
+                }
+                break;
         }
     });
 
