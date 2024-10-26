@@ -183,7 +183,7 @@ wss.on('connection', (ws) => {
                         }));
                     });
 
-                    // Optionally send to the recorder as well
+                    // Send to the recorder as well
                     if (session.recorder && session.recorder.readyState === WebSocket.OPEN) {
                         console.log(`Sending session_reset to the recorder`);
                         session.recorder.send(JSON.stringify({
