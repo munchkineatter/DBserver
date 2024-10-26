@@ -198,9 +198,12 @@ wss.on('connection', (ws) => {
                 break;
 
             case 'reset_view_log':
-                console.log(`[Server] Received reset_view_log from recorder, sessionId: ${sessionId}`);
+                console.log(`[Server] Received reset_view_log from ${deviceRole}, sessionId: ${sessionId}`);
                 if (sessionId && sessions.has(sessionId)) {
                     const session = sessions.get(sessionId);
+                    
+                    // Clear the session log on the server
+                    session.sessionLog = [];
                     
                     const resetViewMessage = JSON.stringify({
                         type: 'reset_view_log'
@@ -214,6 +217,11 @@ wss.on('connection', (ws) => {
                             viewer.send(resetViewMessage);
                         }
                     });
+
+                    // Send confirmation back to recorder
+                    if (session.recorder && session.recorder.readyState === WebSocket.OPEN) {
+                        session.recorder.send(resetViewMessage);
+                    }
                 }
                 break;
         }
