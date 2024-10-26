@@ -32,7 +32,8 @@ wss.on('connection', (ws) => {
                     recorder: ws,
                     viewers: new Set(),
                     isActive: true,
-                    readings: []  // Store readings history
+                    readings: [],
+                    timerData: null  // Add timer data storage
                 });
                 ws.send(JSON.stringify({
                     type: 'session_created',
@@ -50,7 +51,8 @@ wss.on('connection', (ws) => {
                     ws.send(JSON.stringify({
                         type: 'session_joined',
                         sessionId,
-                        isActive: session.isActive
+                        isActive: session.isActive,
+                        timerData: session.timerData  // Send current timer data
                     }));
 
                     // Send existing readings history to new viewer
@@ -100,6 +102,20 @@ wss.on('connection', (ws) => {
                     session.viewers.forEach(viewer => {
                         viewer.send(JSON.stringify({
                             type: 'session_ended'
+                        }));
+                    });
+                }
+                break;
+
+            case 'timer_update':
+                if (sessionId && sessions.has(sessionId)) {
+                    const session = sessions.get(sessionId);
+                    session.timerData = data.timerData;
+                    // Broadcast timer update to all viewers
+                    session.viewers.forEach(viewer => {
+                        viewer.send(JSON.stringify({
+                            type: 'timer_update',
+                            timerData: data.timerData
                         }));
                     });
                 }
