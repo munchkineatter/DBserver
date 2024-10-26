@@ -49,12 +49,17 @@ wss.on('connection', (ws) => {
                 
                 if (session) {
                     session.viewers.add(ws);
+                    // Send only unique sessions
+                    const uniqueSessionLog = Array.from(new Map(
+                        session.sessionLog.map(item => [item.id, item])
+                    ).values());
+                    
                     ws.send(JSON.stringify({
                         type: 'session_joined',
                         sessionId,
                         isActive: session.isActive,
                         timerData: session.timerData,
-                        sessionLog: session.sessionLog  // Send existing session log
+                        sessionLog: uniqueSessionLog  // Send deduplicated session log
                     }));
 
                     // Send existing readings history to new viewer
@@ -65,13 +70,6 @@ wss.on('connection', (ws) => {
                                 data: reading
                             }));
                         });
-                    }
-
-                    // If session is not active, send session_ended
-                    if (!session.isActive) {
-                        ws.send(JSON.stringify({
-                            type: 'session_ended'
-                        }));
                     }
                 } else {
                     ws.send(JSON.stringify({
