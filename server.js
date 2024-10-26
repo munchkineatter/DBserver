@@ -196,6 +196,26 @@ wss.on('connection', (ws) => {
                     }
                 }
                 break;
+
+            case 'reset_view_log':
+                console.log(`[Server] Received reset_view_log from recorder, sessionId: ${sessionId}`);
+                if (sessionId && sessions.has(sessionId)) {
+                    const session = sessions.get(sessionId);
+                    
+                    const resetViewMessage = JSON.stringify({
+                        type: 'reset_view_log'
+                    });
+
+                    // Send reset message to all viewers
+                    console.log(`[Server] Broadcasting reset_view_log to ${session.viewers.size} viewer(s)`);
+                    session.viewers.forEach(viewer => {
+                        if (viewer.readyState === WebSocket.OPEN) {
+                            console.log('[Server] Sending reset_view_log to viewer');
+                            viewer.send(resetViewMessage);
+                        }
+                    });
+                }
+                break;
         }
     });
 
